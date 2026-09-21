@@ -70,6 +70,32 @@ final class SettingsController
             flash('success', 'AI settings saved.');
         }
 
+        if ($section === 'mcp') {
+            $enabled = empty($_POST['mcp_enabled']) ? '0' : '1';
+            $newToken = trim((string) ($_POST['mcp_token'] ?? ''));
+            $remove = !empty($_POST['mcp_token_remove']);
+
+            $pairs = ['mcp_enabled' => $enabled];
+
+            if ($remove) {
+                $pairs['mcp_token_hash'] = '';
+                $pairs['mcp_enabled'] = '0';
+            } elseif ($newToken !== '') {
+                if (strlen($newToken) < 32) {
+                    flash('error', 'Use an MCP bearer token with at least 32 characters.');
+                    redirect('settings#mcp');
+                }
+                $pairs['mcp_token_hash'] = password_hash($newToken, Auth::algo());
+            } elseif ($enabled === '1' && setting('mcp_token_hash', '') === '') {
+                $pairs['mcp_enabled'] = '0';
+                flash('error', 'Add an MCP bearer token before enabling the MCP server.');
+            }
+
+            Settings::many($pairs);
+            Activity::log('updated', 'settings', null, 'Updated MCP server settings' . ($newToken !== '' ? ' (new token)' : ''));
+            flash('success', 'MCP settings saved.');
+        }
+
         redirect('settings');
     }
 
