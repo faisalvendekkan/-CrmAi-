@@ -87,6 +87,12 @@
       case 'db-test': Setup.testDb(); break;
       case 'setup-next': Setup.next(); break;
       case 'setup-back': Setup.back(); break;
+      case 'employee-import': {
+        const form = t.closest('[data-employee-import]');
+        const file = form && form.querySelector('[data-employee-import-file]');
+        if (file) file.click();
+        break;
+      }
       case 'ai-models': aiModels(t); break;
       case 'ai-test': aiTest(t); break;
     }
@@ -370,6 +376,26 @@
     }
     return { open, close, clear, ask };
   })();
+
+  // ---------- Employee CSV import ----------
+  $$('[data-employee-import-file]').forEach((input) => {
+    input.addEventListener('change', () => {
+      if (!input.files || !input.files[0]) return;
+      const file = input.files[0];
+      if (!/\.csv$/i.test(file.name)) {
+        toast('Choose a CSV file.', 'error');
+        input.value = '';
+        return;
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        toast('CSV file is too large. Maximum size is 2 MB.', 'error');
+        input.value = '';
+        return;
+      }
+      const form = input.closest('form');
+      if (form) form.submit();
+    });
+  });
 
   // ---------- Attendance roster ----------
   $$('.roster-row').forEach((row) => {
