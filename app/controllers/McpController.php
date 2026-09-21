@@ -117,10 +117,18 @@ final class McpController
 
     private function tools(): array
     {
+        $readonly = [
+            'readOnlyHint' => true,
+            'destructiveHint' => false,
+            'openWorldHint' => false,
+            'idempotentHint' => true,
+        ];
+
         return [
             [
                 'name' => 'list_employees',
-                'description' => 'List employee records from HrAdmin. Use this when the user asks for employee details, employee list, staff list, headcount records or all employees.',
+                'title' => 'List employees',
+                'description' => 'Use this when the user asks to list, show or review employees or staff records in HrAdmin.',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
@@ -130,11 +138,12 @@ final class McpController
                     ],
                     'additionalProperties' => false,
                 ],
-                'annotations' => ['readOnlyHint' => true, 'destructiveHint' => false],
+                'annotations' => $readonly,
             ],
             [
                 'name' => 'employee_details',
-                'description' => 'Retrieve employee details. If id is supplied, returns one employee with documents, recent attendance and leave. If no id is supplied, returns a list of employees.',
+                'title' => 'Employee details',
+                'description' => 'Use this when the user asks for employee details. With an id it returns one full employee profile; without an id it returns employees.',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
@@ -143,25 +152,27 @@ final class McpController
                     ],
                     'additionalProperties' => false,
                 ],
-                'annotations' => ['readOnlyHint' => true, 'destructiveHint' => false],
+                'annotations' => $readonly,
             ],
             [
                 'name' => 'search_employees',
-                'description' => 'Search employee records by name, employee ID, department, designation, email, QID or passport number.',
+                'title' => 'Search employees',
+                'description' => 'Search HrAdmin employee records by name, employee ID, department, designation, email, QID or passport number.',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
-                        'query' => ['type' => 'string', 'description' => 'Search text.'],
+                        'query' => ['type' => 'string', 'description' => 'Employee search text.'],
                         'limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 50, 'default' => 20],
                     ],
                     'required' => ['query'],
                     'additionalProperties' => false,
                 ],
-                'annotations' => ['readOnlyHint' => true, 'destructiveHint' => false],
+                'annotations' => $readonly,
             ],
             [
                 'name' => 'get_employee',
-                'description' => 'Get one employee profile by numeric employee record ID.',
+                'title' => 'Get employee',
+                'description' => 'Retrieve one HrAdmin employee profile by numeric employee record ID.',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
@@ -170,11 +181,12 @@ final class McpController
                     'required' => ['id'],
                     'additionalProperties' => false,
                 ],
-                'annotations' => ['readOnlyHint' => true, 'destructiveHint' => false],
+                'annotations' => $readonly,
             ],
             [
                 'name' => 'attendance_summary',
-                'description' => 'Get attendance counts and employee names for a date.',
+                'title' => 'Attendance summary',
+                'description' => 'Get HrAdmin attendance counts and employee attendance records for a date.',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
@@ -182,11 +194,12 @@ final class McpController
                     ],
                     'additionalProperties' => false,
                 ],
-                'annotations' => ['readOnlyHint' => true, 'destructiveHint' => false],
+                'annotations' => $readonly,
             ],
             [
                 'name' => 'pending_leave_requests',
-                'description' => 'List pending employee leave requests.',
+                'title' => 'Pending leave requests',
+                'description' => 'List pending employee leave requests in HrAdmin.',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
@@ -194,11 +207,12 @@ final class McpController
                     ],
                     'additionalProperties' => false,
                 ],
-                'annotations' => ['readOnlyHint' => true, 'destructiveHint' => false],
+                'annotations' => $readonly,
             ],
             [
                 'name' => 'expiry_alerts',
-                'description' => 'List HR/admin records that are expired or due soon, using the app alert window.',
+                'title' => 'Expiry alerts',
+                'description' => 'List HrAdmin records that are expired or due soon, including employee and administration expiries.',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
@@ -206,17 +220,79 @@ final class McpController
                     ],
                     'additionalProperties' => false,
                 ],
-                'annotations' => ['readOnlyHint' => true, 'destructiveHint' => false],
+                'annotations' => $readonly,
             ],
             [
                 'name' => 'hr_dashboard_summary',
-                'description' => 'Get a compact HR dashboard summary: employee totals, leave, attendance today and expiry counts.',
+                'title' => 'HR dashboard summary',
+                'description' => 'Get employee totals, pending leave, today attendance and expiry counts from HrAdmin.',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => new stdClass(),
                     'additionalProperties' => false,
                 ],
-                'annotations' => ['readOnlyHint' => true, 'destructiveHint' => false],
+                'annotations' => $readonly,
+            ],
+            [
+                'name' => 'search',
+                'title' => 'Search HrAdmin',
+                'description' => 'Search HrAdmin employee records for relevant people. This compatibility tool is useful for ChatGPT read and knowledge workflows.',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'query' => ['type' => 'string', 'description' => 'Search query.'],
+                    ],
+                    'required' => ['query'],
+                    'additionalProperties' => false,
+                ],
+                'outputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'results' => [
+                            'type' => 'array',
+                            'items' => [
+                                'type' => 'object',
+                                'properties' => [
+                                    'id' => ['type' => 'string'],
+                                    'title' => ['type' => 'string'],
+                                    'url' => ['type' => 'string'],
+                                    'metadata' => ['type' => 'object'],
+                                ],
+                                'required' => ['id', 'title', 'url'],
+                                'additionalProperties' => true,
+                            ],
+                        ],
+                    ],
+                    'required' => ['results'],
+                    'additionalProperties' => false,
+                ],
+                'annotations' => $readonly,
+            ],
+            [
+                'name' => 'fetch',
+                'title' => 'Fetch HrAdmin record',
+                'description' => 'Fetch the complete HrAdmin employee record for an item returned by the search tool.',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'id' => ['type' => 'string', 'description' => 'Search result id such as employee-12.'],
+                    ],
+                    'required' => ['id'],
+                    'additionalProperties' => false,
+                ],
+                'outputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'id' => ['type' => 'string'],
+                        'title' => ['type' => 'string'],
+                        'text' => ['type' => 'string'],
+                        'url' => ['type' => 'string'],
+                        'metadata' => ['type' => 'object'],
+                    ],
+                    'required' => ['id', 'title', 'text', 'url'],
+                    'additionalProperties' => true,
+                ],
+                'annotations' => $readonly,
             ],
         ];
     }
@@ -233,22 +309,81 @@ final class McpController
                 'pending_leave_requests' => $this->pendingLeave($args),
                 'expiry_alerts' => $this->expiryAlerts($args),
                 'hr_dashboard_summary' => $this->dashboardSummary(),
+                'search' => $this->compatSearch($args),
+                'fetch' => $this->compatFetch($args),
                 default => throw new InvalidArgumentException('Unknown tool: ' . $name),
             };
+
+            $structured = in_array($name, ['search', 'fetch'], true)
+                ? $data
+                : ['data' => $data];
+
             return [
                 'content' => [[
                     'type' => 'text',
-                    'text' => json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                    'text' => json_encode($structured, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 ]],
-                'structuredContent' => $data,
+                'structuredContent' => $structured,
                 'isError' => false,
             ];
         } catch (InvalidArgumentException $e) {
             return [
                 'content' => [['type' => 'text', 'text' => $e->getMessage()]],
+                'structuredContent' => ['error' => $e->getMessage()],
                 'isError' => true,
             ];
         }
+    }
+
+    private function compatSearch(array $args): array
+    {
+        $query = mb_substr(trim((string) ($args['query'] ?? '')), 0, 100);
+        if ($query === '') throw new InvalidArgumentException('query is required.');
+
+        $rows = $this->searchEmployees(['query' => $query, 'limit' => 50]);
+        $base = (is_https() ? 'https://' : 'http://') . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+
+        $results = array_map(static function ($r) use ($base) {
+            $id = (int) $r['id'];
+            $sub = array_filter([$r['employee_no'] ?? '', $r['department'] ?? '', $r['designation'] ?? '']);
+            return [
+                'id' => 'employee-' . $id,
+                'title' => (string) $r['name'],
+                'url' => $base . url('employees/' . $id),
+                'metadata' => [
+                    'type' => 'employee',
+                    'employee_id' => $id,
+                    'summary' => implode(' · ', $sub),
+                    'status' => (string) ($r['status'] ?? ''),
+                ],
+            ];
+        }, $rows);
+
+        return ['results' => $results];
+    }
+
+    private function compatFetch(array $args): array
+    {
+        $raw = trim((string) ($args['id'] ?? ''));
+        if (!preg_match('/^employee-(\d+)$/', $raw, $m)) {
+            throw new InvalidArgumentException('Use an employee result id returned by search, for example employee-12.');
+        }
+
+        $employee = $this->getEmployee(['id' => (int) $m[1]]);
+        $base = (is_https() ? 'https://' : 'http://') . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+
+        return [
+            'id' => $raw,
+            'title' => (string) ($employee['name'] ?? 'Employee'),
+            'text' => json_encode($employee, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'url' => $base . url('employees/' . (int) $m[1]),
+            'metadata' => [
+                'type' => 'employee',
+                'department' => (string) ($employee['department'] ?? ''),
+                'designation' => (string) ($employee['designation'] ?? ''),
+                'status' => (string) ($employee['status'] ?? ''),
+            ],
+        ];
     }
 
     private function listEmployees(array $args): array
