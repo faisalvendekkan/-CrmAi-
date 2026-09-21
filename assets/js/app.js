@@ -87,6 +87,7 @@
       case 'db-test': Setup.testDb(); break;
       case 'setup-next': Setup.next(); break;
       case 'setup-back': Setup.back(); break;
+      case 'ai-models': aiModels(t); break;
       case 'ai-test': aiTest(t); break;
     }
   });
@@ -523,23 +524,100 @@
     d.showModal();
   };
 
-  // ---------- Settings: test AI, provider model hint ----------
+  // ---------- Settings: provider models + connection test ----------
+  const provSel = $('#ai_provider');
+  const modelSel = $('#ai_model');
+  const aiKeyInput = $('#ai_key');
+  const modelStatus = $('#ai-model-status');
+
+  const resetModelSelect = () => {
+    if (!provSel || !modelSel) return;
+    const opt = provSel.selectedOptions[0];
+    const def = opt?.dataset.model || '';
+    modelSel.innerHTML = '';
+    const fallback = document.createElement('option');
+    fallback.value = '';
+    fallback.textContent = 'Default: ' + def;
+    modelSel.appendChild(fallback);
+    modelSel.value = '';
+    modelSel.dataset.current = '';
+    if (modelStatus) {
+      modelStatus.style.color = '';
+      modelStatus.textContent = 'Fetch models to see the models available to this API key.';
+    }
+  };
+
+  const aiModels = async (btn) => {
+    if (!provSel || !modelSel) return;
+    if (btn) btn.classList.add('is-busy');
+    modelSel.disabled = true;
+    if (modelStatus) {
+      modelStatus.style.color = '';
+      modelStatus.textContent = 'Fetching models…';
+    }
+
+    const wanted = modelSel.value || modelSel.dataset.current || '';
+    const res = await api('settings/ai-models', {
+      provider: provSel.value,
+      key: aiKeyInput ? aiKeyInput.value.trim() : '',
+    });
+
+    if (btn) btn.classList.remove('is-busy');
+    modelSel.disabled = false;
+    if (!res.ok) {
+      if (modelStatus) {
+        modelStatus.textContent = res.error || 'Could not fetch models.';
+        modelStatus.style.color = 'var(--danger)';
+      }
+      return;
+    }
+
+    const def = res.default || provSel.selectedOptions[0]?.dataset.model || '';
+    modelSel.innerHTML = '';
+    const defaultOpt = document.createElement('option');
+    defaultOpt.value = '';
+    defaultOpt.textContent = 'Default: ' + def;
+    modelSel.appendChild(defaultOpt);
+
+    (res.models || []).forEach((m) => {
+      const o = document.createElement('option');
+      o.value = m.id;
+      o.textContent = m.label || m.id;
+      modelSel.appendChild(o);
+    });
+
+    if (wanted && (res.models || []).some((m) => m.id === wanted)) modelSel.value = wanted;
+    else if ((res.models || []).some((m) => m.id === def)) modelSel.value = def;
+    else modelSel.value = '';
+
+    modelSel.dataset.current = modelSel.value;
+    if (modelStatus) {
+      modelStatus.style.color = '';
+      modelStatus.textContent = (res.models || []).length + ' compatible models fetched from ' + res.provider + '.';
+    }
+  };
+
   const aiTest = async (btn) => {
     const out = $('#ai-test-result');
     btn.classList.add('is-busy');
     out.textContent = 'Testing…';
-    const res = await api('settings/ai-test', {});
+    const res = await api('settings/ai-test', {
+      provider: provSel ? provSel.value : '',
+      model: modelSel ? modelSel.value : '',
+      key: aiKeyInput ? aiKeyInput.value.trim() : '',
+    });
     btn.classList.remove('is-busy');
-    out.textContent = res.ok ? 'Connected: ' + res.reply : res.error;
+    out.textContent = res.ok ? 'Connected • ' + res.provider + ' • ' + res.model : res.error;
     out.style.color = res.ok ? 'var(--ok)' : 'var(--danger)';
   };
-  const provSel = $('#ai_provider');
-  if (provSel && $('#ai_model')) {
+
+  if (provSel && modelSel) {
     provSel.addEventListener('change', () => {
-      const opt = provSel.selectedOptions[0];
-      const def = opt.dataset.model || { anthropic: 'claude-sonnet-5', openai: 'gpt-4.1-mini', gemini: 'gemini-2.5-flash' }[provSel.value];
-      $('#ai_model').placeholder = 'Default: ' + def;
+      resetModelSelect();
+      aiModels(null);
     });
+    // A saved key is indicated by the presence of the connection-test button.
+    if ($('[data-action="ai-test"]')) aiModels(null);
   }
 
   // ---------- Browser notifications (once per day) ----------
