@@ -22,6 +22,8 @@ final class App
         ["GET",  "profile",                       "ProfileController@index"],
         ["POST", "profile",                       "ProfileController@save"],
 
+        ["GET",  "employees/import-template",        "ModuleController@employeeImportTemplate"],
+        ["POST", "employees/import",                 "ModuleController@employeeImport"],
         ["GET",  "employees/{id}",                "EmployeeController@show"],
         ["POST", "leave/{id}/decide",             "LeaveController@decide"],
 
