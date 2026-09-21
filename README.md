@@ -201,6 +201,6 @@ The token is never stored in plain text. Meridian stores only a one-way password
 - `expiry_alerts`
 - `hr_dashboard_summary`
 
-All current MCP tools are read-only. The endpoint requires HTTPS and a valid bearer token.
+Most MCP tools are read-only. Employee creation is available through `create_employee` / `add_employee`; no update or delete actions are exposed. The endpoint requires HTTPS and a valid bearer token.
 
 The implementation supports the stateless MCP protocol revision `2026-07-28`, with compatibility for clients that still send the legacy `initialize` request.
