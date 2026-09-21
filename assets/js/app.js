@@ -588,6 +588,7 @@
 
     if (wanted && (res.models || []).some((m) => m.id === wanted)) modelSel.value = wanted;
     else if ((res.models || []).some((m) => m.id === def)) modelSel.value = def;
+    else if ((res.models || []).length) modelSel.value = res.models[0].id;
     else modelSel.value = '';
 
     modelSel.dataset.current = modelSel.value;
@@ -616,8 +617,8 @@
       resetModelSelect();
       aiModels(null);
     });
-    // A saved key is indicated by the presence of the connection-test button.
-    if ($('[data-action="ai-test"]')) aiModels(null);
+    // Auto-load only when the page indicates that a key is already saved.
+    if (aiKeyInput && /^Saved key /.test(aiKeyInput.placeholder || '')) aiModels(null);
   }
 
   // ---------- Browser notifications (once per day) ----------
