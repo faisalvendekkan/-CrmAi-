@@ -192,6 +192,8 @@ The token is never stored in plain text. Meridian stores only a one-way password
 
 ### Available tools
 
+- `list_employees`
+- `employee_details`
 - `search_employees`
 - `get_employee`
 - `attendance_summary`
