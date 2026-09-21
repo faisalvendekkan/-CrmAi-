@@ -45,10 +45,14 @@ final class SettingsController
             $provider = array_key_exists(input('ai_provider'), AI::PROVIDERS) ? input('ai_provider') : 'anthropic';
             $pairs = [
                 'ai_provider'   => $provider,
-                'ai_model'      => preg_replace('/[^A-Za-z0-9.\-_:\/]/', '', mb_substr(input('ai_model'), 0, 80)),
+                'ai_model'      => trim(mb_substr(input('ai_model'), 0, 100)),
                 'ai_enabled'    => empty($_POST['ai_enabled']) ? '0' : '1',
                 'ai_share_data' => empty($_POST['ai_share_data']) ? '0' : '1',
             ];
+            if (!AI::validModelId($provider, $pairs['ai_model'])) {
+                $pairs['ai_model'] = '';
+                flash('error', 'The model name was invalid, so the provider default will be used. Fetch models and choose one from the list.');
+            }
             $newKey = trim((string) ($_POST['ai_key'] ?? ''));
             if ($newKey !== '') {
                 $pairs['ai_key'] = Crypto::encrypt(mb_substr($newKey, 0, 400));
@@ -69,14 +73,62 @@ final class SettingsController
         redirect('settings');
     }
 
+    public function aiModels(): void
+    {
+        Auth::require('admin');
+        $body = json_body();
+        $provider = (string) ($body['provider'] ?? AI::provider());
+        if (!array_key_exists($provider, AI::PROVIDERS)) {
+            json_out(['ok' => false, 'error' => 'Choose a valid AI provider.'], 422);
+        }
+        $key = trim((string) ($body['key'] ?? ''));
+        try {
+            $models = AI::models($provider, $key !== '' ? $key : null);
+            json_out([
+                'ok' => true,
+                'models' => $models,
+                'default' => AI::PROVIDERS[$provider]['model'],
+                'provider' => AI::PROVIDERS[$provider]['label'],
+            ]);
+        } catch (RuntimeException $e) {
+            json_out(['ok' => false, 'error' => $e->getMessage()], 502);
+        }
+    }
+
     public function aiTest(): void
     {
         Auth::require('admin');
+        $body = json_body();
+        $provider = (string) ($body['provider'] ?? AI::provider());
+        if (!array_key_exists($provider, AI::PROVIDERS)) {
+            json_out(['ok' => false, 'error' => 'Choose a valid AI provider.'], 422);
+        }
+        $model = trim((string) ($body['model'] ?? ''));
+        if ($model === '') {
+            $model = AI::PROVIDERS[$provider]['model'];
+        }
+        if (!AI::validModelId($provider, $model)) {
+            json_out(['ok' => false, 'error' => 'Choose a valid model from the fetched model list.'], 422);
+        }
+        $key = trim((string) ($body['key'] ?? ''));
+        if ($key === '') {
+            $saved = (string) setting('ai_key', '');
+            $key = $saved !== '' ? Crypto::decrypt($saved) : '';
+        }
         try {
-            $reply = AI::complete('Reply with one short friendly sentence.', [['role' => 'user', 'content' => 'Confirm the connection works and name the model you are.']], 60);
-            json_out(['ok' => true, 'reply' => $reply]);
+            AI::complete(
+                'Reply with exactly: OK',
+                [['role' => 'user', 'content' => 'Connection check']],
+                16,
+                ['provider' => $provider, 'model' => $model, 'key' => $key]
+            );
+            json_out([
+                'ok' => true,
+                'provider' => AI::PROVIDERS[$provider]['label'],
+                'model' => $model,
+            ]);
         } catch (RuntimeException $e) {
-            json_out(['ok' => false, 'error' => $e->getMessage()]);
+            json_out(['ok' => false, 'error' => $e->getMessage()], 502);
         }
     }
 
