@@ -26,8 +26,11 @@ final class AI
 
     public static function model(): string
     {
+        $provider = self::provider();
         $m = trim((string) setting('ai_model', ''));
-        return $m !== '' ? $m : self::PROVIDERS[self::provider()]['model'];
+        return $m !== '' && self::validModelId($provider, $m)
+            ? $m
+            : self::PROVIDERS[$provider]['model'];
     }
 
     public static function validModelId(string $provider, string $model): bool
@@ -162,14 +165,34 @@ final class AI
 
     private static function openai(string $key, string $model, string $system, array $messages, int $max): string
     {
-        $res = self::post('https://api.openai.com/v1/chat/completions', [
+        $input = array_map(static fn ($m) => [
+            'role' => $m['role'],
+            'content' => $m['content'],
+        ], $messages);
+
+        $res = self::post('https://api.openai.com/v1/responses', [
             'Authorization: Bearer ' . $key,
         ], [
-            'model'                 => $model,
-            'max_completion_tokens' => $max,
-            'messages'              => [['role' => 'system', 'content' => $system], ...$messages],
+            'model'             => $model,
+            'instructions'      => $system,
+            'input'             => $input,
+            'max_output_tokens' => $max,
         ]);
-        return trim((string) ($res['choices'][0]['message']['content'] ?? ''));
+
+        if (isset($res['output_text']) && is_string($res['output_text'])) {
+            return trim($res['output_text']);
+        }
+
+        $text = '';
+        foreach (($res['output'] ?? []) as $item) {
+            if (($item['type'] ?? '') !== 'message') continue;
+            foreach (($item['content'] ?? []) as $part) {
+                if (($part['type'] ?? '') === 'output_text') {
+                    $text .= (string) ($part['text'] ?? '');
+                }
+            }
+        }
+        return trim($text);
     }
 
     private static function gemini(string $key, string $model, string $system, array $messages, int $max): string
