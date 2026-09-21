@@ -46,8 +46,13 @@ final class McpController
             case 'server/discover':
                 $this->result($id, [
                     'protocolVersion' => self::PROTOCOL,
-                    'serverInfo' => ['name' => 'Meridian HR MCP', 'version' => APP_VERSION],
                     'capabilities' => ['tools' => new stdClass()],
+                    '_meta' => [
+                        'io.modelcontextprotocol/serverInfo' => [
+                            'name' => 'HrAdmin',
+                            'version' => APP_VERSION,
+                        ],
+                    ],
                 ]);
                 break;
 
@@ -113,6 +118,33 @@ final class McpController
     private function tools(): array
     {
         return [
+            [
+                'name' => 'list_employees',
+                'description' => 'List employee records from HrAdmin. Use this when the user asks for employee details, employee list, staff list, headcount records or all employees.',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 100, 'default' => 50],
+                        'status' => ['type' => 'string', 'enum' => ['active', 'on_leave', 'inactive']],
+                        'department' => ['type' => 'string'],
+                    ],
+                    'additionalProperties' => false,
+                ],
+                'annotations' => ['readOnlyHint' => true, 'destructiveHint' => false],
+            ],
+            [
+                'name' => 'employee_details',
+                'description' => 'Retrieve employee details. If id is supplied, returns one employee with documents, recent attendance and leave. If no id is supplied, returns a list of employees.',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'id' => ['type' => 'integer', 'minimum' => 1],
+                        'limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 100, 'default' => 50],
+                    ],
+                    'additionalProperties' => false,
+                ],
+                'annotations' => ['readOnlyHint' => true, 'destructiveHint' => false],
+            ],
             [
                 'name' => 'search_employees',
                 'description' => 'Search employee records by name, employee ID, department, designation, email, QID or passport number.',
@@ -193,6 +225,8 @@ final class McpController
     {
         try {
             $data = match ($name) {
+                'list_employees' => $this->listEmployees($args),
+                'employee_details' => $this->employeeDetails($args),
                 'search_employees' => $this->searchEmployees($args),
                 'get_employee' => $this->getEmployee($args),
                 'attendance_summary' => $this->attendanceSummary($args),
@@ -215,6 +249,44 @@ final class McpController
                 'isError' => true,
             ];
         }
+    }
+
+    private function listEmployees(array $args): array
+    {
+        $limit = max(1, min(100, (int) ($args['limit'] ?? 50)));
+        $where = [];
+        $params = [];
+
+        $status = trim((string) ($args['status'] ?? ''));
+        if ($status !== '') {
+            if (!in_array($status, ['active', 'on_leave', 'inactive'], true)) {
+                throw new InvalidArgumentException('status must be active, on_leave or inactive.');
+            }
+            $where[] = 'status = ?';
+            $params[] = $status;
+        }
+
+        $department = mb_substr(trim((string) ($args['department'] ?? '')), 0, 100);
+        if ($department !== '') {
+            $where[] = 'department = ?';
+            $params[] = $department;
+        }
+
+        $sql = "SELECT id, name, employee_no, department, designation, nationality, email, phone, joining_date,
+                       qid_expiry, passport_expiry, visa_expiry, status
+                FROM employees";
+        if ($where) $sql .= ' WHERE ' . implode(' AND ', $where);
+        $sql .= " ORDER BY status = 'inactive', name LIMIT {$limit}";
+        return DB::all($sql, $params);
+    }
+
+    private function employeeDetails(array $args): array
+    {
+        $id = (int) ($args['id'] ?? 0);
+        if ($id > 0) {
+            return $this->getEmployee(['id' => $id]);
+        }
+        return $this->listEmployees(['limit' => $args['limit'] ?? 50]);
     }
 
     private function searchEmployees(array $args): array
