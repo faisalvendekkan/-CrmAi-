@@ -1,0 +1,13 @@
+# Private runtime data — never commit
+/storage/*
+!/storage/.htaccess
+!/storage/index.html
+/meridian-data/
+.env
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

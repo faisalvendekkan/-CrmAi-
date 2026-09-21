@@ -1,0 +1,43 @@
+# Meridian HR — Apache / LiteSpeed rules (Hostinger)
+Options -Indexes
+DirectoryIndex index.php
+ServerSignature Off
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Force HTTPS once SSL is active on the domain (uncomment the two lines below).
+  # RewriteCond %{HTTPS} !=on
+  # RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # Block hidden files and folders (.git, .env, .github ...) except .well-known
+  RewriteRule (^|/)\.(?!well-known/) - [F,L]
+
+  # Block application code, private storage and non-public file types
+  RewriteRule ^(app|storage)(/|$) - [F,L]
+  RewriteRule \.(md|sql|log|lock|sh|ini|dist|bak|txt)$ - [F,L]
+
+  # Serve real static files directly
+  RewriteCond %{REQUEST_FILENAME} -f
+  RewriteRule ^assets/ - [L]
+
+  # Everything else goes to the front controller
+  RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  <FilesMatch "\.(woff2|js|css)$">
+    Header set Cache-Control "public, max-age=2592000"
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType font/woff2 "access plus 1 year"
+  ExpiresByType text/css "access plus 30 days"
+  ExpiresByType application/javascript "access plus 30 days"
+</IfModule>
+
+AddType font/woff2 .woff2
