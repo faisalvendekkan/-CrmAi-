@@ -21,6 +21,8 @@ final class Settings
         "ai_model"            => "",
         "ai_key"              => "",
         "ai_share_data"       => "1",
+        "mcp_enabled"         => "0",
+        "mcp_token_hash"      => "",
     ];
 
     public static function all(): array
