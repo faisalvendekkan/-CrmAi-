@@ -45,7 +45,19 @@ $provider = AI::provider();
     <div class="form-section" style="padding-top:0">
       <div class="form-grid">
         <div class="field"><label for="ai_provider">Provider</label><select id="ai_provider" name="ai_provider"><?php foreach (AI::PROVIDERS as $k => $p): ?><option value="<?= e($k) ?>" <?= $provider === $k ? 'selected' : '' ?> data-model="<?= e($p['model']) ?>"><?= e($p['label']) ?></option><?php endforeach; ?></select></div>
-        <div class="field"><label for="ai_model">Model</label><input id="ai_model" name="ai_model" value="<?= e(setting('ai_model')) ?>" placeholder="Default: <?= e(AI::PROVIDERS[$provider]['model']) ?>"></div>
+        <div class="field">
+          <label for="ai_model">Model</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="ai_model" name="ai_model" data-current="<?= e(AI::validModelId($provider, (string) setting('ai_model')) ? setting('ai_model') : '') ?>" style="min-width:0;flex:1">
+              <option value="">Default: <?= e(AI::PROVIDERS[$provider]['model']) ?></option>
+              <?php if (AI::validModelId($provider, (string) setting('ai_model')) && setting('ai_model') !== ''): ?>
+                <option value="<?= e(setting('ai_model')) ?>" selected><?= e(setting('ai_model')) ?></option>
+              <?php endif; ?>
+            </select>
+            <button class="btn btn-sm" type="button" data-action="ai-models">Fetch models</button>
+          </div>
+          <p class="help" id="ai-model-status">Models are fetched securely from the selected provider using your saved or newly entered API key.</p>
+        </div>
         <div class="field full">
           <label for="ai_key">API key</label>
           <input id="ai_key" name="ai_key" type="password" autocomplete="off" placeholder="<?= $keyHint ? 'Saved key ' . e($keyHint) . ' — paste a new key to replace it' : 'Paste your API key' ?>">
