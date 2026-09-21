@@ -74,7 +74,7 @@ $provider = AI::provider();
     </div>
     <div class="form-actions">
       <button class="btn btn-primary" type="submit">Save AI settings</button>
-      <?php if ($keyHint): ?><button class="btn" type="button" data-action="ai-test"><?= icon('spark') ?>Test connection</button><?php endif; ?>
+      <button class="btn" type="button" data-action="ai-test"><?= icon('spark') ?>Test connection</button>
       <span class="soft" id="ai-test-result" style="font-size:13px"></span>
     </div>
   </form>
