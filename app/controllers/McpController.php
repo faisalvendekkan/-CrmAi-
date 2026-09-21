@@ -314,16 +314,22 @@ final class McpController
                 default => throw new InvalidArgumentException('Unknown tool: ' . $name),
             };
 
-            $structured = in_array($name, ['search', 'fetch'], true)
-                ? $data
-                : ['data' => $data];
+            if (in_array($name, ['search', 'fetch'], true)) {
+                return [
+                    'content' => [[
+                        'type' => 'text',
+                        'text' => json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                    ]],
+                    'structuredContent' => $data,
+                    'isError' => false,
+                ];
+            }
 
             return [
                 'content' => [[
                     'type' => 'text',
-                    'text' => json_encode($structured, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                    'text' => json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 ]],
-                'structuredContent' => $structured,
                 'isError' => false,
             ];
         } catch (InvalidArgumentException $e) {
