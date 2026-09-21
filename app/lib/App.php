@@ -55,6 +55,7 @@ final class App
 
         ["GET",  "settings",                      "SettingsController@index"],
         ["POST", "settings",                      "SettingsController@save"],
+        ["POST", "settings/ai-models",            "SettingsController@aiModels"],
         ["POST", "settings/ai-test",              "SettingsController@aiTest"],
         ["GET",  "settings/backup",               "SettingsController@backup"],
         ["GET",  "activity",                      "SettingsController@activity"],
