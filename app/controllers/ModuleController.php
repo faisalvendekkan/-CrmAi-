@@ -152,6 +152,134 @@ final class ModuleController
         redirect($back !== '' && preg_match('#^employees/\d+$#', $back) ? $back : $key);
     }
 
+    public function employeeImportTemplate(): void
+    {
+        $mod = $this->module('employees');
+        Auth::require($mod['perm']);
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="employee-import-template.csv"');
+        header('Cache-Control: no-store');
+        $out = fopen('php://output', 'w');
+        fwrite($out, "\xEF\xBB\xBF");
+        fputcsv($out, array_keys($mod['fields']));
+        fputcsv($out, [
+            'Ahmed Rahman','EMP-001','Sales','Sales Executive','Indian',
+            'ahmed.rahman@example.com','+97450000001',today(),
+            '28000000001',date('Y-m-d', strtotime('+1 year')),'P1234567',
+            date('Y-m-d', strtotime('+2 years')),date('Y-m-d', strtotime('+1 year')),
+            'active','Sample row — replace or delete before import'
+        ]);
+        fclose($out);
+        exit;
+    }
+
+    public function employeeImport(): void
+    {
+        $mod = $this->module('employees');
+        Auth::require($mod['perm'], 'edit');
+
+        $file = $_FILES['employee_csv'] ?? null;
+        if (!$file || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            flash('error', 'Choose a CSV file to import.');
+            redirect('employees');
+        }
+        if ((int) ($file['size'] ?? 0) > 2 * 1024 * 1024 || !str_ends_with(strtolower((string) ($file['name'] ?? '')), '.csv')) {
+            flash('error', 'Use a CSV file up to 2 MB.');
+            redirect('employees');
+        }
+
+        $fh = fopen((string) $file['tmp_name'], 'r');
+        if (!$fh) {
+            flash('error', 'The CSV file could not be read.');
+            redirect('employees');
+        }
+
+        $header = fgetcsv($fh);
+        if (!$header) {
+            fclose($fh);
+            flash('error', 'The CSV file is empty.');
+            redirect('employees');
+        }
+        $header = array_map(static function ($v) {
+            $v = preg_replace('/^\xEF\xBB\xBF/', '', trim((string) $v));
+            return strtolower(preg_replace('/[^a-z0-9]+/', '_', $v));
+        }, $header);
+
+        $aliases = [];
+        foreach ($mod['fields'] as $col => $def) {
+            $aliases[strtolower($col)] = $col;
+            $aliases[strtolower(preg_replace('/[^a-z0-9]+/', '_', $def['label']))] = $col;
+        }
+        $map = [];
+        foreach ($header as $idx => $h) {
+            if (isset($aliases[$h])) $map[$idx] = $aliases[$h];
+        }
+        if (!in_array('name', $map, true)) {
+            fclose($fh);
+            flash('error', 'CSV must contain a name or Full name column.');
+            redirect('employees');
+        }
+
+        $inserted = 0;
+        $skipped = 0;
+        $rowNo = 1;
+        $examples = [];
+
+        while (($row = fgetcsv($fh)) !== false) {
+            $rowNo++;
+            if (!array_filter($row, static fn ($v) => trim((string) $v) !== '')) continue;
+
+            $data = [];
+            foreach ($mod['fields'] as $col => $def) $data[$col] = null;
+            foreach ($map as $idx => $col) $data[$col] = trim((string) ($row[$idx] ?? ''));
+
+            $errs = [];
+            foreach ($mod['fields'] as $col => $def) {
+                $v = trim((string) ($data[$col] ?? ''));
+                if ($def['type'] === 'select') {
+                    if ($v === '') $v = (string) ($def['default'] ?? array_key_first($def['options']));
+                    elseif (!isset($def['options'][$v])) {
+                        $match = null;
+                        foreach ($def['options'] as $ov => $label) {
+                            if (strcasecmp($v, (string) $label) === 0) { $match = (string) $ov; break; }
+                        }
+                        if ($match === null) $errs[] = $def['label'] . ' is invalid';
+                        else $v = $match;
+                    }
+                }
+                if ($def['type'] === 'email' && $v !== '' && !filter_var($v, FILTER_VALIDATE_EMAIL)) $errs[] = $def['label'] . ' is invalid';
+                if ($def['type'] === 'date' && $v !== '' && !valid_date($v)) $errs[] = $def['label'] . ' must use YYYY-MM-DD';
+                if (!empty($def['required']) && $v === '') $errs[] = $def['label'] . ' is required';
+                $data[$col] = $v === '' ? null : $v;
+            }
+
+            $duplicate = false;
+            foreach (['employee_no','email','qid'] as $unique) {
+                if (!$duplicate && !empty($data[$unique])) {
+                    $duplicate = (bool) DB::val("SELECT id FROM employees WHERE `$unique` = ? LIMIT 1", [$data[$unique]]);
+                }
+            }
+            if ($duplicate) $errs[] = 'duplicate employee';
+
+            if ($errs) {
+                $skipped++;
+                if (count($examples) < 5) $examples[] = 'Row ' . $rowNo . ': ' . implode(', ', array_unique($errs));
+                continue;
+            }
+
+            DB::insert('employees', $data);
+            $inserted++;
+        }
+        fclose($fh);
+
+        Activity::log('imported', 'employees', null, "Imported {$inserted} employees from CSV; skipped {$skipped}");
+        $msg = "Imported {$inserted} employee" . ($inserted === 1 ? '' : 's') . ".";
+        if ($skipped) $msg .= " Skipped {$skipped} duplicate or invalid row" . ($skipped === 1 ? '' : 's') . ".";
+        if ($examples) $msg .= ' ' . implode(' ', $examples);
+        flash($inserted ? 'success' : 'error', $msg);
+        redirect('employees');
+    }
+
     public function export(string $key): void
     {
         $m = $this->module($key);
