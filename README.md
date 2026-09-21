@@ -174,3 +174,31 @@ assets/fonts/          Geist (self-hosted)
 assets/vendor/         pdf.js and mammoth.js for CV reading (self-hosted)
 storage/               fallback private folder (not in Git)
 ```
+
+
+## MCP server
+
+Meridian HR includes a remote, read-only MCP endpoint for connecting approved AI clients to HR data.
+
+### Enable it
+
+1. Open **Settings → MCP server**.
+2. Enter a strong bearer token with at least 32 characters.
+3. Enable the MCP server and save.
+4. Copy the HTTPS endpoint shown in Settings. It ends in `/mcp`.
+5. Configure your MCP client to send the token as `Authorization: Bearer YOUR_TOKEN`.
+
+The token is never stored in plain text. Meridian stores only a one-way password hash, so keep the original token in a password manager.
+
+### Available tools
+
+- `search_employees`
+- `get_employee`
+- `attendance_summary`
+- `pending_leave_requests`
+- `expiry_alerts`
+- `hr_dashboard_summary`
+
+All current MCP tools are read-only. The endpoint requires HTTPS and a valid bearer token.
+
+The implementation supports the stateless MCP protocol revision `2026-07-28`, with compatibility for clients that still send the legacy `initialize` request.
