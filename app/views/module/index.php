@@ -13,6 +13,14 @@ $q = fn (array $extra) => url($key, array_filter(array_merge($filters, ['page' =
     <p><?= e($m['intro']) ?></p>
   </div>
   <div class="page-actions">
+    <?php if ($key === 'employees' && $canEdit): ?>
+      <form method="post" action="<?= e(url('employees/import')) ?>" enctype="multipart/form-data" data-employee-import style="display:inline-flex">
+        <?= csrf_field() ?>
+        <input type="file" name="employee_csv" accept=".csv,text/csv" hidden data-employee-import-file>
+        <button class="btn" type="button" data-action="employee-import"><?= icon('upload') ?>Import CSV</button>
+      </form>
+      <a class="btn btn-quiet" href="<?= e(url('employees/import-template')) ?>"><?= icon('download') ?>Template</a>
+    <?php endif; ?>
     <a class="btn" href="<?= e(url("$key/export")) ?>"><?= icon('download') ?>Export CSV</a>
     <?php if ($canEdit): ?><a class="btn btn-primary" href="<?= e(url("$key/new")) ?>"><?= icon('plus') ?>Add <?= e($m['singular']) ?></a><?php endif; ?>
   </div>
