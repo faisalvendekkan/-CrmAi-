@@ -97,7 +97,7 @@ $mcpHasToken = setting('mcp_token_hash', '') !== '';
       <div class="field full">
         <label>MCP endpoint</label>
         <input value="<?= e($mcpEndpoint) ?>" readonly>
-        <p class="help">Remote HTTPS endpoint. Current tools are read-only: employee search/profile, attendance summary, pending leave, expiry alerts and HR dashboard summary.</p>
+        <p class="help">Remote HTTPS endpoint. Tools include employee search/profile, attendance, leave, expiry alerts and HR dashboard summary. Employee creation is enabled; update and delete actions are not exposed.</p>
       </div>
       <div class="field full">
         <label for="mcp_token">Bearer token</label>
