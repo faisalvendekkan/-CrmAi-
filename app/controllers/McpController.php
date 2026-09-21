@@ -16,6 +16,11 @@ final class McpController
     {
         header('Content-Type: application/json; charset=utf-8');
         header('Cache-Control: no-store');
+        header('MCP-Protocol-Version: ' . self::PROTOCOL);
+
+        if (!is_https()) {
+            $this->error(null, -32000, 'MCP requires HTTPS.', 426);
+        }
 
         if (setting('mcp_enabled', '0') !== '1') {
             $this->error(null, -32001, 'MCP is disabled.', 403);
@@ -92,7 +97,7 @@ final class McpController
             $this->error(null, -32002, 'MCP authentication is not configured.', 401);
         }
 
-        $auth = (string) ($_SERVER['HTTP_AUTHORIZATION'] ?? '');
+        $auth = (string) ($_SERVER['HTTP_AUTHORIZATION'] ?? ($_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? ''));
         if (!preg_match('/^Bearer\s+(.+)$/i', $auth, $m)) {
             header('WWW-Authenticate: Bearer');
             $this->error(null, -32003, 'Bearer token required.', 401);
