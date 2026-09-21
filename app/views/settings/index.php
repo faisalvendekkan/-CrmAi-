@@ -3,6 +3,9 @@ $tzs = ['Asia/Qatar', 'Asia/Dubai', 'Asia/Riyadh', 'Asia/Kuwait', 'Asia/Bahrain'
 $curTz = (string) setting('timezone');
 if (!in_array($curTz, $tzs, true)) $tzs[] = $curTz;
 $provider = AI::provider();
+
+$mcpEndpoint = (is_https() ? 'https://' : 'http://') . ($_SERVER['HTTP_HOST'] ?? 'your-domain') . url('mcp');
+$mcpHasToken = setting('mcp_token_hash', '') !== '';
 ?>
 <div class="page-head">
   <div>
@@ -79,3 +82,37 @@ $provider = AI::provider();
     </div>
   </form>
 </div>
+
+<form class="panel" method="post" action="<?= e(url('settings')) ?>" id="mcp" data-busy style="margin-top:20px">
+  <?= csrf_field() ?><input type="hidden" name="section" value="mcp">
+  <div class="panel-head">
+    <div>
+      <h2>MCP server</h2>
+      <p>Connect Meridian HR securely to ChatGPT, Claude and other MCP clients.</p>
+    </div>
+    <?= setting('mcp_enabled', '0') === '1' && $mcpHasToken ? '<span class="badge tone-ok">Enabled</span>' : '<span class="badge">Off</span>' ?>
+  </div>
+  <div class="form-section" style="padding-top:0">
+    <div class="form-grid">
+      <div class="field full">
+        <label>MCP endpoint</label>
+        <input value="<?= e($mcpEndpoint) ?>" readonly>
+        <p class="help">Remote HTTPS endpoint. Current tools are read-only: employee search/profile, attendance summary, pending leave, expiry alerts and HR dashboard summary.</p>
+      </div>
+      <div class="field full">
+        <label for="mcp_token">Bearer token</label>
+        <input id="mcp_token" name="mcp_token" type="password" autocomplete="new-password" minlength="32" placeholder="<?= $mcpHasToken ? 'Token configured — enter a new token to replace it' : 'Enter a strong token with at least 32 characters' ?>">
+        <p class="help">Stored as a one-way password hash. The original token cannot be recovered, so save it securely before submitting.</p>
+      </div>
+    </div>
+  </div>
+  <div class="form-section">
+    <div style="display:grid;gap:12px">
+      <label class="check"><input type="checkbox" name="mcp_enabled" value="1" <?= setting('mcp_enabled', '0') === '1' ? 'checked' : '' ?>><span>Enable MCP server<small>Only requests with the correct bearer token can access the MCP tools.</small></span></label>
+      <?php if ($mcpHasToken): ?><label class="check"><input type="checkbox" name="mcp_token_remove" value="1"><span>Remove saved MCP token<small>This also disables the MCP server.</small></span></label><?php endif; ?>
+    </div>
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">Save MCP settings</button>
+  </div>
+</form>
