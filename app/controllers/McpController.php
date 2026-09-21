@@ -4,8 +4,8 @@ declare(strict_types=1);
 /**
  * Remote MCP endpoint for Meridian HR.
  *
- * Read-only by design. Uses a dedicated bearer token configured by an admin
- * in Settings. Supports the current stateless MCP shape and a small legacy
+ * Uses a dedicated bearer token configured by an admin in Settings.
+ * Read tools are available plus tightly-scoped employee creation. Supports the current stateless MCP shape and a small legacy
  * compatibility surface for clients that still call initialize.
  */
 final class McpController
@@ -123,6 +123,12 @@ final class McpController
             'openWorldHint' => false,
             'idempotentHint' => true,
         ];
+        $create = [
+            'readOnlyHint' => false,
+            'destructiveHint' => false,
+            'openWorldHint' => false,
+            'idempotentHint' => false,
+        ];
 
         return [
             [
@@ -234,6 +240,62 @@ final class McpController
                 'annotations' => $readonly,
             ],
             [
+                'name' => 'create_employee',
+                'title' => 'Create employee',
+                'description' => 'Create a new employee record in HrAdmin. Use only when the user explicitly asks to add/create an employee. Full name is required; all other fields are optional.',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'name' => ['type' => 'string', 'minLength' => 2, 'maxLength' => 255],
+                        'employee_no' => ['type' => 'string', 'maxLength' => 255],
+                        'department' => ['type' => 'string', 'maxLength' => 255],
+                        'designation' => ['type' => 'string', 'maxLength' => 255],
+                        'nationality' => ['type' => 'string', 'maxLength' => 255],
+                        'email' => ['type' => 'string', 'maxLength' => 255],
+                        'phone' => ['type' => 'string', 'maxLength' => 255],
+                        'joining_date' => ['type' => 'string', 'description' => 'YYYY-MM-DD'],
+                        'qid' => ['type' => 'string', 'maxLength' => 255],
+                        'qid_expiry' => ['type' => 'string', 'description' => 'YYYY-MM-DD'],
+                        'passport' => ['type' => 'string', 'maxLength' => 255],
+                        'passport_expiry' => ['type' => 'string', 'description' => 'YYYY-MM-DD'],
+                        'visa_expiry' => ['type' => 'string', 'description' => 'YYYY-MM-DD'],
+                        'status' => ['type' => 'string', 'enum' => ['active', 'on_leave', 'inactive'], 'default' => 'active'],
+                        'notes' => ['type' => 'string', 'maxLength' => 5000],
+                    ],
+                    'required' => ['name'],
+                    'additionalProperties' => false,
+                ],
+                'annotations' => $create,
+            ],
+            [
+                'name' => 'add_employee',
+                'title' => 'Add employee',
+                'description' => 'Alias of create_employee for adding a new HrAdmin employee record.',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'name' => ['type' => 'string', 'minLength' => 2, 'maxLength' => 255],
+                        'employee_no' => ['type' => 'string', 'maxLength' => 255],
+                        'department' => ['type' => 'string', 'maxLength' => 255],
+                        'designation' => ['type' => 'string', 'maxLength' => 255],
+                        'nationality' => ['type' => 'string', 'maxLength' => 255],
+                        'email' => ['type' => 'string', 'maxLength' => 255],
+                        'phone' => ['type' => 'string', 'maxLength' => 255],
+                        'joining_date' => ['type' => 'string', 'description' => 'YYYY-MM-DD'],
+                        'qid' => ['type' => 'string', 'maxLength' => 255],
+                        'qid_expiry' => ['type' => 'string', 'description' => 'YYYY-MM-DD'],
+                        'passport' => ['type' => 'string', 'maxLength' => 255],
+                        'passport_expiry' => ['type' => 'string', 'description' => 'YYYY-MM-DD'],
+                        'visa_expiry' => ['type' => 'string', 'description' => 'YYYY-MM-DD'],
+                        'status' => ['type' => 'string', 'enum' => ['active', 'on_leave', 'inactive'], 'default' => 'active'],
+                        'notes' => ['type' => 'string', 'maxLength' => 5000],
+                    ],
+                    'required' => ['name'],
+                    'additionalProperties' => false,
+                ],
+                'annotations' => $create,
+            ],
+            [
                 'name' => 'search',
                 'title' => 'Search HrAdmin',
                 'description' => 'Search HrAdmin employee records for relevant people. This compatibility tool is useful for ChatGPT read and knowledge workflows.',
@@ -309,6 +371,8 @@ final class McpController
                 'pending_leave_requests' => $this->pendingLeave($args),
                 'expiry_alerts' => $this->expiryAlerts($args),
                 'hr_dashboard_summary' => $this->dashboardSummary(),
+                'create_employee' => $this->createEmployee($args),
+                'add_employee' => $this->createEmployee($args),
                 'search' => $this->compatSearch($args),
                 'fetch' => $this->compatFetch($args),
                 default => throw new InvalidArgumentException('Unknown tool: ' . $name),
@@ -339,6 +403,66 @@ final class McpController
                 'isError' => true,
             ];
         }
+    }
+
+    private function createEmployee(array $args): array
+    {
+        $allowed = [
+            'name','employee_no','department','designation','nationality','email','phone','joining_date',
+            'qid','qid_expiry','passport','passport_expiry','visa_expiry','status','notes'
+        ];
+        $data = [];
+        foreach ($allowed as $field) {
+            $value = isset($args[$field]) ? trim((string) $args[$field]) : '';
+            $data[$field] = $value === '' ? null : $value;
+        }
+
+        $name = trim((string) ($data['name'] ?? ''));
+        if (mb_strlen($name) < 2 || mb_strlen($name) > 255) {
+            throw new InvalidArgumentException('name is required and must be between 2 and 255 characters.');
+        }
+
+        if (!empty($data['email']) && !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            throw new InvalidArgumentException('email must be a valid email address.');
+        }
+
+        foreach (['joining_date','qid_expiry','passport_expiry','visa_expiry'] as $field) {
+            if (!empty($data[$field]) && !valid_date((string) $data[$field])) {
+                throw new InvalidArgumentException($field . ' must use YYYY-MM-DD.');
+            }
+        }
+
+        $status = (string) ($data['status'] ?? 'active');
+        if ($status === '') $status = 'active';
+        if (!in_array($status, ['active','on_leave','inactive'], true)) {
+            throw new InvalidArgumentException('status must be active, on_leave or inactive.');
+        }
+        $data['status'] = $status;
+
+        foreach (['employee_no','email','qid'] as $unique) {
+            if (!empty($data[$unique])) {
+                $exists = DB::val("SELECT id FROM employees WHERE `$unique` = ? LIMIT 1", [$data[$unique]]);
+                if ($exists) {
+                    throw new InvalidArgumentException($unique . ' already belongs to another employee.');
+                }
+            }
+        }
+
+        try {
+            $id = DB::insert('employees', $data);
+        } catch (PDOException $e) {
+            if ($e->getCode() === '23000') {
+                throw new InvalidArgumentException('This employee conflicts with an existing unique record.');
+            }
+            throw $e;
+        }
+
+        Activity::log('created', 'employees', $id, 'Employee created via MCP: ' . $name, null);
+        return [
+            'ok' => true,
+            'id' => $id,
+            'employee' => $this->getEmployee(['id' => $id]),
+        ];
     }
 
     private function compatSearch(array $args): array
