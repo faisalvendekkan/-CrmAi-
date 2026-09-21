@@ -55,6 +55,8 @@ final class App
         ["POST", "users/{id}/delete",             "UserController@delete"],
         ["POST", "users/{id}/sign-out",           "UserController@signOut"],
 
+        ["POST", "mcp",                           "McpController@handle"],
+
         ["GET",  "settings",                      "SettingsController@index"],
         ["POST", "settings",                      "SettingsController@save"],
         ["POST", "settings/ai-models",            "SettingsController@aiModels"],
@@ -99,7 +101,7 @@ final class App
             Migrator::ensure();
         }
 
-        if ($method === "POST") {
+        if ($method === "POST" && $path !== "mcp") {
             Csrf::verify();
         }
 
