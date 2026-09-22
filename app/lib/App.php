@@ -43,6 +43,11 @@ final class App
         ["POST", "alerts/settings",               "NotificationController@save"],
         ["GET",  "api/alerts/browser",            "NotificationController@browser"],
 
+        ["GET",  "workspace",                     "WorkspaceController@index"],
+        ["POST", "workspace/save",                "WorkspaceController@save"],
+        ["POST", "workspace/{id}/pin",            "WorkspaceController@pin"],
+        ["POST", "workspace/{id}/delete",         "WorkspaceController@delete"],
+
         ["GET",  "ai-tools",                      "ToolController@ai"],
         ["GET",  "apps",                          "ToolController@apps"],
         ["POST", "tools/save",                    "ToolController@save"],
