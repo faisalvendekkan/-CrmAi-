@@ -350,3 +350,68 @@ textarea {
 .horizon .blip.r-expired {
   box-shadow: 0 0 0 3px rgba(240,139,128,.16), 0 0 12px rgba(240,139,128,.40);
 }
+
+
+/* ---------- Prompts & Notes workspace ---------- */
+.workspace-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+  padding: 16px;
+}
+.workspace-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 230px;
+  padding: 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-l);
+  box-shadow: 0 12px 28px -26px rgba(17, 43, 90, .32);
+}
+.workspace-card:hover { border-color: var(--accent-line); }
+.workspace-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.workspace-card h3 {
+  font-size: 16px;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+.workspace-text {
+  flex: 1;
+  max-height: 280px;
+  overflow: auto;
+  color: var(--text-2);
+  font-size: 13.5px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+  padding-right: 4px;
+}
+.workspace-pinned {
+  flex: none;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 650;
+}
+.workspace-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.workspace-actions form { margin: 0; }
+
+@media (max-width: 720px) {
+  .workspace-grid {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 12px;
+  }
+}
