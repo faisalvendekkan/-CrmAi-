@@ -100,7 +100,7 @@ $config = [
   <aside class="sidebar" id="sidebar" aria-label="Main navigation">
     <a class="brand" href="<?= e(url()) ?>">
       <span class="brand-mark"><?php View::partial('logo'); ?></span>
-      <span><strong><?= e($company) ?></strong><span>HR & administration</span></span>
+      <span><strong>AI Workspace</strong><span>HR & administration</span></span>
     </a>
     <nav class="nav">
       <?php foreach ($nav as $group => $items):
