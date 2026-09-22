@@ -16,6 +16,7 @@ final class Auth
         "notifications" => "Expiry alerts",
         "ai_tools"      => "AI integrations",
         "apps"          => "Applications",
+        "workspace_items" => "Prompts & Notes",
         "assistant"     => "AI assistant",
     ];
 
