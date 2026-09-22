@@ -40,6 +40,7 @@ $nav = [
     'Workspace' => [
         ['ai-tools', 'AI integrations', 'spark', 'ai_tools'],
         ['apps', 'Applications', 'apps', 'apps'],
+        ['workspace', 'Prompts & Notes', 'file', 'workspace_items'],
     ],
     'Administration' => [
         ['users', 'Users & access', 'shield', 'admin'],
