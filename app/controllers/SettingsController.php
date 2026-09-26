@@ -15,6 +15,8 @@ final class SettingsController
             'outside'  => Config::dataDir() ? Config::isOutsideWebroot((string) Config::dataDir()) : false,
             'schema'   => (int) setting('schema_version', 0),
             'aiUsage'  => (int) DB::val('SELECT COUNT(*) FROM ai_usage WHERE created_at >= ?', [date('Y-m-01')]),
+            'biometricPunches' => (int) DB::val('SELECT COUNT(*) FROM biometric_punches'),
+            'biometricUnmatched' => (int) DB::val('SELECT COUNT(*) FROM biometric_punches WHERE employee_id IS NULL'),
             'pageModule' => 'settings',
         ]);
     }
@@ -96,6 +98,29 @@ final class SettingsController
             flash('success', 'MCP settings saved.');
         }
 
+        if ($section === 'biometric') {
+            $enabled = empty($_POST['biometric_enabled']) ? '0' : '1';
+            $newToken = trim((string) ($_POST['biometric_token'] ?? ''));
+            $remove = !empty($_POST['biometric_token_remove']);
+            $pairs = ['biometric_enabled' => $enabled];
+            if ($remove) {
+                $pairs['biometric_token_hash'] = '';
+                $pairs['biometric_enabled'] = '0';
+            } elseif ($newToken !== '') {
+                if (strlen($newToken) < 32 || strlen($newToken) > 200) {
+                    flash('error', 'Use an integration token with 32 to 200 characters.');
+                    redirect('settings#biometric');
+                }
+                $pairs['biometric_token_hash'] = password_hash($newToken, Auth::algo());
+            } elseif ($enabled === '1' && setting('biometric_token_hash', '') === '') {
+                $pairs['biometric_enabled'] = '0';
+                flash('error', 'Add an integration token before enabling biometric import.');
+            }
+            Settings::many($pairs);
+            Activity::log('updated', 'settings', null, 'Updated biometric import settings' . ($newToken !== '' ? ' (new token)' : ''));
+            flash('success', 'Biometric import settings saved.');
+        }
+
         redirect('settings');
     }
 
@@ -161,7 +186,7 @@ final class SettingsController
     public function backup(): void
     {
         Auth::require('admin');
-        $tables = ['employees', 'documents', 'emp_documents', 'assets', 'tasks', 'leave_requests', 'attendance', 'candidates', 'tools'];
+        $tables = ['employees', 'documents', 'emp_documents', 'assets', 'tasks', 'leave_requests', 'attendance', 'biometric_punches', 'candidates', 'tools'];
         $out = ['app' => APP_NAME, 'version' => APP_VERSION, 'exported_at' => date('c'), 'company' => setting('company_name')];
         foreach ($tables as $t) {
             $out[$t] = DB::all("SELECT * FROM `$t`");

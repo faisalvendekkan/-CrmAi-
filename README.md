@@ -15,6 +15,27 @@ HR and administration workspace for GCC companies. Built in plain PHP 8 + MySQL 
 - **Meridian assistant**: AI on every page (Anthropic Claude, OpenAI or Google Gemini). It reads only the data each user is allowed to see and never changes data.
 - **Everyday tools**: Ctrl/⌘ K search, dark and light themes, CSV export, JSON backup and an activity log.
 
+## ZKBio Time attendance sync
+
+Meridian HR can receive attendance punches from ZKBio Time through a small sync script on the **Windows computer running ZKBio Time**. The biometric device sends punches to ZKBio Time first. The script reads its transaction API, then sends only transaction ID, employee code, punch time, punch state, verification type and terminal serial to Meridian HR over HTTPS. Fingerprint and face templates are not sent.
+
+1. Confirm the device is online in ZKBio Time. Enroll an employee and make a test punch. Set that person's **Employee ID** in Meridian HR to exactly the same value as ZKBio Time's `emp_code`. Each Employee ID must identify only one person. Keep the device, ZKBio Time and Meridian HR company time zones aligned.
+2. Deploy this version of Meridian HR and open **Settings → ZKBio Time attendance import**. Enter a random 32-character-or-longer integration token, turn on import, and save. Keep the token in a password manager. This token is separate from the MCP and AI tokens.
+3. On the ZKBio Time Windows computer, run the script once in PowerShell, using your real HTTPS HRMS URL:
+
+   ```powershell
+   powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File "C:\path\to\zkbio-sync.ps1" -Setup -HrmsUrl "https://your-hrms-domain.example" -TerminalSn "6193205200456"
+   ```
+
+   The script prompts for the ZKBio Time administrator login and the integration token from step 2. It keeps them in `%LOCALAPPDATA%\MeridianZKBio` encrypted for that Windows user; never add these files to Git. ZKBio Time is contacted at `http://127.0.0.1` on the same computer by default.
+
+4. Run the same script without `-Setup` to test it. It reads the last seven days by default. Use `-LookbackDays 90` once to import older punches if required. Check **Attendance** in Meridian HR for check-in and check-out times.
+5. In Windows Task Scheduler, run the script every 5 minutes under the **same Windows account** that completed setup. Set the task to not start a second instance while one is running. Keep that computer powered on and connected to the internet. A failed run prints an error and can safely be retried; imported ZKBio transaction IDs are unique in Meridian HR.
+
+The first punch of a day becomes check-in. The last distinct punch becomes check-out; one punch leaves check-out empty. Existing on-leave and remote entries keep their manual times and status. A manually marked absence changes to present when a device punch arrives. If an employee code does not match exactly one Employee ID, the punch is retained but not added to the daily roster. Correct the Employee ID and click **Match biometric punches** on Attendance. Overnight shifts need a separate shift rule; this import groups by the punch's calendar date.
+
+The integration endpoint is `POST /api/biometrics/transactions`, with `Authorization: Bearer <integration token>` and a JSON body containing `transactions` (1–100 ZKBio transaction objects). It requires HTTPS and is disabled until configured in Settings.
+
 ## Requirements
 
 - PHP 8.0 or newer (8.2+ recommended), with `pdo_mysql`, `mbstring`, `sodium` or `openssl`, and `curl` (curl is needed for AI).

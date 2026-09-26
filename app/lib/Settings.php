@@ -23,6 +23,8 @@ final class Settings
         "ai_share_data"       => "1",
         "mcp_enabled"         => "0",
         "mcp_token_hash"      => "",
+        "biometric_enabled"   => "0",
+        "biometric_token_hash" => "",
     ];
 
     public static function all(): array
