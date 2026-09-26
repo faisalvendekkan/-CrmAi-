@@ -61,6 +61,8 @@ final class App
         ["POST", "users/{id}/sign-out",           "UserController@signOut"],
 
         ["POST", "mcp",                           "McpController@handle"],
+        ["POST", "api/biometrics/transactions",   "BiometricController@transactions"],
+        ["POST", "attendance/biometrics/reconcile", "BiometricController@reconcile"],
 
         ["GET",  "settings",                      "SettingsController@index"],
         ["POST", "settings",                      "SettingsController@save"],
@@ -106,7 +108,7 @@ final class App
             Migrator::ensure();
         }
 
-        if ($method === "POST" && $path !== "mcp") {
+        if ($method === "POST" && !in_array($path, ["mcp", "api/biometrics/transactions"], true)) {
             Csrf::verify();
         }
 

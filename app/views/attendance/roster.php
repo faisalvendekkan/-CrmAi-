@@ -10,6 +10,12 @@ $isToday = $date === today();
   </div>
   <div class="page-actions">
     <a class="btn" href="<?= e(url('attendance/records')) ?>"><?= icon('clock') ?>All records</a>
+    <?php if ($canEdit && $biometricUnmatched): ?>
+      <form method="post" action="<?= e(url('attendance/biometrics/reconcile')) ?>">
+        <?= csrf_field() ?>
+        <button class="btn" type="submit">Match <?= (int) $biometricUnmatched ?> biometric punches</button>
+      </form>
+    <?php endif; ?>
     <?php if ($canEdit && $unmarked): ?>
       <form method="post" action="<?= e(url('attendance/mark-all')) ?>" data-confirm="Mark <?= $unmarked ?> unmarked employees as present?" data-confirm-text="People on approved leave are marked as on leave instead." data-confirm-ok="Mark present">
         <?= csrf_field() ?><input type="hidden" name="date" value="<?= e($date) ?>">

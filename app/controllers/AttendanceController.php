@@ -40,6 +40,7 @@ final class AttendanceController
             'rows'     => $rows,
             'counts'   => $counts,
             'unmarked' => $unmarked,
+            'biometricUnmatched' => (int) DB::val('SELECT COUNT(*) FROM biometric_punches WHERE employee_id IS NULL'),
             'statuses' => self::STATUSES,
             'canEdit'  => can('attendance', 'edit'),
             'pageModule' => 'attendance',

@@ -6,6 +6,8 @@ $provider = AI::provider();
 
 $mcpEndpoint = (is_https() ? 'https://' : 'http://') . ($_SERVER['HTTP_HOST'] ?? 'your-domain') . url('mcp');
 $mcpHasToken = setting('mcp_token_hash', '') !== '';
+$biometricEndpoint = (is_https() ? 'https://' : 'http://') . ($_SERVER['HTTP_HOST'] ?? 'your-domain') . url('api/biometrics/transactions');
+$biometricHasToken = setting('biometric_token_hash', '') !== '';
 ?>
 <div class="page-head">
   <div>
@@ -115,4 +117,23 @@ $mcpHasToken = setting('mcp_token_hash', '') !== '';
   <div class="form-actions">
     <button class="btn btn-primary" type="submit">Save MCP settings</button>
   </div>
+</form>
+
+<form class="panel" method="post" action="<?= e(url('settings')) ?>" id="biometric" data-busy style="margin-top:20px">
+  <?= csrf_field() ?><input type="hidden" name="section" value="biometric">
+  <div class="panel-head">
+    <div><h2>ZKBio Time attendance import</h2><p><?= (int) $biometricPunches ?> punches received; <?= (int) $biometricUnmatched ?> need a matching Employee ID.</p></div>
+    <?= setting('biometric_enabled', '0') === '1' && $biometricHasToken ? '<span class="badge tone-ok">Enabled</span>' : '<span class="badge">Off</span>' ?>
+  </div>
+  <div class="form-section" style="padding-top:0">
+    <div class="form-grid">
+      <div class="field full"><label>Import endpoint</label><input value="<?= e($biometricEndpoint) ?>" readonly><p class="help">Run the sync script on the Windows computer hosting ZKBio Time. Its employee code must match the Employee ID on each Meridian HR employee profile. The endpoint accepts punch metadata only; it does not receive fingerprints or face templates.</p></div>
+      <div class="field full"><label for="biometric_token">Integration bearer token</label><input id="biometric_token" name="biometric_token" type="password" autocomplete="new-password" minlength="32" maxlength="200" placeholder="<?= $biometricHasToken ? 'Token configured — enter a new token to replace it' : 'Enter a random token with at least 32 characters' ?>"><p class="help">Store this token on the ZKBio Time computer. Meridian HR stores only its one-way hash; save the original securely before submitting.</p></div>
+    </div>
+  </div>
+  <div class="form-section"><div style="display:grid;gap:12px">
+    <label class="check"><input type="checkbox" name="biometric_enabled" value="1" <?= setting('biometric_enabled', '0') === '1' ? 'checked' : '' ?>><span>Enable biometric import<small>Only HTTPS requests with the matching token can add punches.</small></span></label>
+    <?php if ($biometricHasToken): ?><label class="check"><input type="checkbox" name="biometric_token_remove" value="1"><span>Remove integration token<small>This also disables import.</small></span></label><?php endif; ?>
+  </div></div>
+  <div class="form-actions"><button class="btn btn-primary" type="submit">Save import settings</button></div>
 </form>
