@@ -24,7 +24,7 @@ Meridian HR can receive attendance punches from ZKBio Time through a small sync 
 3. On the ZKBio Time Windows computer, run the script once in PowerShell, using your real HTTPS HRMS URL:
 
    ```powershell
-   powershell.exe -NoProfile -File "C:\path\to\zkbio-sync.ps1" -Setup -HrmsUrl "https://your-hrms-domain.example" -TerminalSn "6193205200456"
+   powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File "C:\path\to\zkbio-sync.ps1" -Setup -HrmsUrl "https://your-hrms-domain.example" -TerminalSn "6193205200456"
    ```
 
    The script prompts for the ZKBio Time administrator login and the integration token from step 2. It keeps them in `%LOCALAPPDATA%\MeridianZKBio` encrypted for that Windows user; never add these files to Git. ZKBio Time is contacted at `http://127.0.0.1` on the same computer by default.
